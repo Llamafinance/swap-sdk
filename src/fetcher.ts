@@ -22,7 +22,7 @@ export abstract class Fetcher {
   /**
    * Cannot be constructed.
    */
-  private constructor() {}
+  private constructor() { }
 
   /**
    * Fetch information for a given token on the given chain, using the given ethers provider.
@@ -43,15 +43,15 @@ export abstract class Fetcher {
       typeof TOKEN_DECIMALS_CACHE?.[chainId]?.[address] === 'number'
         ? TOKEN_DECIMALS_CACHE[chainId][address]
         : await new Contract(address, ERC20, provider).decimals().then((decimals: number): number => {
-            TOKEN_DECIMALS_CACHE = {
-              ...TOKEN_DECIMALS_CACHE,
-              [chainId]: {
-                ...TOKEN_DECIMALS_CACHE?.[chainId],
-                [address]: decimals
-              }
+          TOKEN_DECIMALS_CACHE = {
+            ...TOKEN_DECIMALS_CACHE,
+            [chainId]: {
+              ...TOKEN_DECIMALS_CACHE?.[chainId],
+              [address]: decimals
             }
-            return decimals
-          })
+          }
+          return decimals
+        })
     return new Token(chainId, address, parsedDecimals, symbol, name)
   }
 
@@ -62,14 +62,16 @@ export abstract class Fetcher {
    * @param provider the provider to use to fetch the data
    */
   public static async fetchPairData(
+    factoryAddress: string,
+    initCodeHash: string,
     tokenA: Token,
     tokenB: Token,
     provider = getDefaultProvider(getNetwork(tokenA.chainId))
   ): Promise<Pair> {
     invariant(tokenA.chainId === tokenB.chainId, 'CHAIN_ID')
-    const address = Pair.getAddress(tokenA, tokenB)
+    const address = Pair.getAddress(factoryAddress, initCodeHash, tokenA, tokenB)
     const [reserves0, reserves1] = await new Contract(address, IPancakePair.abi, provider).getReserves()
     const balances = tokenA.sortsBefore(tokenB) ? [reserves0, reserves1] : [reserves1, reserves0]
-    return new Pair(new TokenAmount(tokenA, balances[0]), new TokenAmount(tokenB, balances[1]))
+    return new Pair(factoryAddress, initCodeHash, new TokenAmount(tokenA, balances[0]), new TokenAmount(tokenB, balances[1]))
   }
 }
